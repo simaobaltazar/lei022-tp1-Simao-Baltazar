@@ -1,7 +1,7 @@
 # Projeto: Service Manager API Rest
 
 **Identificação do estudante:** Simão Baltazar (Nº de Aluno: 240001316)  
-**Versão de Node usada:** [Inserir Versão, ex: v20.x.x][cite: 5]
+**Versão de Node usada:v24.21.0
 
 **Domínio do recurso adicional:** Gestão de subscrições (Service Manager).  
 
