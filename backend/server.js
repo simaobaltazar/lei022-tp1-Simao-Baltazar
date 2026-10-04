@@ -3,113 +3,208 @@ const app = express();
 app.use(express.json());
 const { ItemNotFoundException } = require('./exceptions/ItemNotFoundException');
 const { BadRequestException } = require('./exceptions/BadRequestException');
+const { ConflictException } = require('./exceptions/ConflictException');
+
 const PORT = 3000;
 
-const items = [
-    { id: 1, name: 'Tv'},
-    {id: 2, name: 'Monitor'}
+const services = [
+    { id: 1, nameService: 'Apple Music', type:'student', joining:'2012-08-05T17:00:00.000Z'},
+    {id: 2, nameService: 'Prime Videos', type:'family', joining:'2023-09-04T13:00:00.000Z'}
 ] 
 
-app.get('/api/items', (req, res)=> {
+app.get('/api/serviceManager', (req, res)=> {
     try{
     const name = req.query.name;
 
     if(name){
-        const item = items.filter(item => item.name === name);
-        return res.status(200).json(item);
+        const service = services.filter(service => service.nameService.toLocaleLowerCase() === name.toLocaleLowerCase());
+        return res.status(200).json(service);
     }
     
     
-    res.status(200).json(items);
+    res.status(200).json(services);
     }catch(error){
+        res.set('Content-Type', 'application/problem+json');
         if(error.statusCode){
-            return res.status(error.statusCode).json({error : error.message});
+            return res.status(error.statusCode).json({
+                status: error.statusCode,
+                title: error.name || 'Request error',
+                detail : error.message
+            });
         }
-        return res.status(500).json({error : "Iternal server error"});
+        return res.status(500).json({
+            status: 500,
+            title : "Internal server error",
+            detail: "Unexpected error occurred"
+        });
     }
 })
 
-app.get('/api/items/:id', (req, res) => {
+app.get('/api/serviceManager/:id', (req, res) => {
     try{
     const id = Number(req.params.id);
-    const item = items.find(item => item.id === id);
 
-    if(!item){
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new BadRequestException("Invalid ID. It must be a positive integer.");
+    }
+
+    const service = services.find(service => service.id === id);
+
+    if(!service){
         throw new ItemNotFoundException();
     }
 
-    res.status(200).json(item);
+
+
+    res.status(200).json(service);
     }catch(error){
+        res.set('Content-Type', 'application/problem+json');
         if(error.statusCode){
-            return res.status(error.statusCode).json({error : error.message});
+            return res.status(error.statusCode).json({
+                status: error.statusCode,
+                title: error.name || 'Request error',
+                detail : error.message
+            });
         }
-        return res.status(500).json({error : "Iternal server error"});
+        return res.status(500).json({
+            status: 500,
+            title : "Internal server error",
+            detail: "Unexpected error occurred"
+        });
     }
 })
 
-app.post('/api/items', (req, res) => {
+app.post('/api/serviceManager', (req, res) => {
     try{   
-    const {name} = req.body;
-
-    if(!name){
-        throw new BadRequestException("The name field is required");
+    const {nameService, type} = req.body || {};
+    const allowedTypes = ['student', 'individual', 'family'];
+    
+    if(!nameService || !type){
+        throw new BadRequestException("The name and type field is required");
     }
 
-    const newItem = {
-        id: items.length ? Math.max(...items.map(item => item.id))+1 : 1,
-        name
-    };
-    items.push(newItem);
+    const existingService = services.find(service => service.nameService.toLowerCase() === nameService.toLowerCase());
 
-    res.status(201).json(newItem);
+    if(existingService){
+        throw new ConflictException("A service with this name already exists");
+    }
+
+    if(!allowedTypes.includes(type)){
+        throw new BadRequestException("Invalid type . Allowed values are: student, individual, family");
+    }
+
+
+
+    const newService = {
+        id: services.length ? Math.max(...services.map(service => service.id))+1 : 1,
+        nameService,
+        type,
+        joining: new Date().toISOString()
+    };
+
+    res.set('Location', `/api/serviceManager/${newService.id}`);
+
+    services.push(newService);
+
+    res.status(201).json(newService);
     }catch(error){
-        console.log("ERRO REAL:", error);
-        if(error.statusCode) {
-            
-            return res.status(error.statusCode).json({error : error.message });
+        res.set('Content-Type', 'application/problem+json');
+        if(error.statusCode){
+            return res.status(error.statusCode).json({
+                status: error.statusCode,
+                title: error.name || 'Request error',
+                detail : error.message
+            });
         }
-        return res.status(500).json({error : "Internal server error"});
+        return res.status(500).json({
+            status: 500,
+            title : "Internal server error",
+            detail: "Unexpected error occurred"
+        });
     }
 })
 
-app.put('/api/items/:id', (req, res) => {
+app.put('/api/serviceManager/:id', (req, res) => {
     try{
+    const {nameService, type} = req.body;
+    const allowedTypes = ['student', 'individual', 'family'];
     const id = Number(req.params.id);
-    const item = items.find(item => item.id === id);
 
-    if(!item){
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new BadRequestException("Invalid ID. It must be a positive integer.");
+    }
+
+    const service = services.find(service => service.id === id);
+
+    if(!service){
         throw new ItemNotFoundException();
     }
 
-    const {name} = req.body;
-    if(!name){
-        throw new BadRequestException("The name field is required");
+
+    if(!nameService || !type){
+        throw new BadRequestException("The name and type field is required");
     }
-    item.name = name;
-    res.status(200).json(item);
+
+    const existingService = services.find(service => service.nameService.toLowerCase() === nameService.toLowerCase());
+
+
+    if(existingService && existingService.id !== id){
+        throw new ConflictException("A service with this name already exists");
+    }
+
+    if(!allowedTypes.includes(type)){
+        throw new BadRequestException("Invalid type . Allowed values are: student, individual, family");
+    }
+
+    service.nameService = nameService;
+    service.type = type;
+    res.status(200).json(service);
     }catch(error){
+        res.set('Content-Type', 'application/problem+json');
         if(error.statusCode){
-            return res.status(error.statusCode).json({error : error.message });
+            return res.status(error.statusCode).json({
+                status: error.statusCode,
+                title: error.name || 'Request error',
+                detail : error.message
+            });
         }
-        return res.status(500).json({error : "Internal server error"});
+        return res.status(500).json({
+            status: 500,
+            title : "Internal server error",
+            detail: "Unexpected error occurred"
+        });
     }
 })
 
-app.delete('/api/items/:id', (req, res) => {
+app.delete('/api/serviceManager/:id', (req, res) => {
     try{
     const id = Number(req.params.id);
-    const index = items.findIndex(item => item.id === id);
+    
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new BadRequestException("Invalid ID. It must be a positive integer.");
+    }
+    
+    const index = services.findIndex(service => service.id === id);
     if(index === -1){
         throw new ItemNotFoundException();
     }
 
-    items.splice(index, 1);
+    services.splice(index, 1);
     res.status(204).send();
     }catch(error){
+        res.set('Content-Type', 'application/problem+json');
         if(error.statusCode){
-            return res.status(error.statusCode).json({error : error.message});
+            return res.status(error.statusCode).json({
+                status: error.statusCode,
+                title: error.name || 'Request error',
+                detail : error.message
+            });
         }
-        return res.status(500).json({error : "Internal server error"});
+        return res.status(500).json({
+            status: 500,
+            title : "Internal server error",
+            detail: "Unexpected error occurred"
+        });
     }
 })
 
