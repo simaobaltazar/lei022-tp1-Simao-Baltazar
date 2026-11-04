@@ -1,9 +1,9 @@
 const express = require('express');
 const app = express();
 app.use(express.json());
-const { ItemNotFoundException } = require('./exceptions/ItemNotFoundException');
-const { BadRequestException } = require('./exceptions/BadRequestException');
-const { ConflictException } = require('./exceptions/ConflictException');
+const { ItemNotFoundException } = require('./src/exceptions/ItemNotFoundException');
+const { BadRequestException } = require('./src/exceptions/BadRequestException');
+const { ConflictException } = require('./src/exceptions/ConflictException');
 
 const PORT = 3000;
 
