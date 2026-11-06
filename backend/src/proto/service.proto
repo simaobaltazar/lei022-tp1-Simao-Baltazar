@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package webhook;
+
+service WebhookService {
+    rpc SendWebHook (ServiceRequest) returns (ServiceResponse);
+}
+
+message Service {
+    int32 id = 1;
+    string nameService = 2;
+    string type = 3;
+    string joining = 4;
+}
+
+message ServiceRequest {
+    string eventType = 1;
+    Service service = 2;
+}
+
+message ServiceResponse {
+    int32 statusCode = 1;
+    bool delivered = 2;
+}
