@@ -1,6 +1,6 @@
 import requests
 
-link = "https://webhook.site/ad60f92c-65fd-4898-bf5d-6135cddf2aa3"
+link = "https://webhook.site/cb810607-8db4-49e7-ab49-5aca57777bd1"
 
 
 def send_webhook(eventType, service):
