@@ -4,6 +4,7 @@ app.use(express.json());
 const { ItemNotFoundException } = require('./src/exceptions/ItemNotFoundException');
 const { BadRequestException } = require('./src/exceptions/BadRequestException');
 const { ConflictException } = require('./src/exceptions/ConflictException');
+const { sendWebhook } = require('./src/grpc/webhookClient');
 
 const PORT = 3000;
 
@@ -106,6 +107,9 @@ app.post('/api/serviceManager', (req, res) => {
 
     services.push(newService);
 
+        sendWebhook('service.created', newService);
+
+
     res.status(201).json(newService);
     }catch(error){
         res.set('Content-Type', 'application/problem+json');
@@ -158,6 +162,10 @@ app.put('/api/serviceManager/:id', (req, res) => {
 
     service.nameService = nameService;
     service.type = type;
+
+    sendWebhook('service.updated', service);
+
+
     res.status(200).json(service);
     }catch(error){
         res.set('Content-Type', 'application/problem+json');
@@ -189,7 +197,11 @@ app.delete('/api/serviceManager/:id', (req, res) => {
         throw new ItemNotFoundException();
     }
 
+    const removedService = services[index];
     services.splice(index, 1);
+
+    sendWebhook('service.deleted', removedService);
+
     res.status(204).send();
     }catch(error){
         res.set('Content-Type', 'application/problem+json');
