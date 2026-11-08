@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Notifications</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: #f4f6f9;
+      color: #1f2937;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 48px 16px;
+    }
+
+    .app { width: 100%; max-width: 600px; }
+
+    /* ---------- Header ---------- */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .mailbox {
+      font-size: 44px;
+      line-height: 1;
+      display: inline-block;
+      animation: float 3s ease-in-out infinite;
+    }
+    .mailbox.ring { animation: wiggle 0.6s ease-in-out 2; }
+
+    .heading { flex: 1; }
+    h1 { font-size: 21px; font-weight: 600; }
+    .subtitle { color: #6b7280; font-size: 14px; margin-top: 2px; }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      font-size: 12px;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; }
+    .status.online .dot { background: #16a34a; animation: pulse 1.8s infinite; }
+    .status.offline .dot { background: #f59e0b; }
+
+    /* ---------- Panel ---------- */
+    .panel {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .count {
+      background: #eef2ff;
+      color: #4338ca;
+      font-size: 12px;
+      padding: 2px 10px;
+      border-radius: 999px;
+    }
+
+    .item {
+      display: flex;
+      gap: 14px;
+      padding: 16px 20px;
+      border-bottom: 1px solid #f0f1f3;
+      animation: fadeIn 0.35s ease-out;
+      position: relative;
+    }
+    .item:last-child { border-bottom: none; }
+    .item.unread { background: #fafbff; }
+    .item.unread::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      width: 6px;
+      height: 6px;
+      margin-top: -3px;
+      border-radius: 50%;
+      background: #4f46e5;
+    }
+
+    .icon {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon svg { width: 18px; height: 18px; }
+    .created .icon { background: #dcfce7; color: #15803d; }
+    .updated .icon { background: #fef3c7; color: #b45309; }
+    .deleted .icon { background: #f3f4f6; color: #6b7280; }
+    .unknown .icon { background: #f3f4f6; color: #6b7280; }
+
+    .content { flex: 1; min-width: 0; }
+    .row { display: flex; justify-content: space-between; gap: 12px; }
+    .title { font-size: 14px; font-weight: 600; }
+    .time { font-size: 12px; color: #9ca3af; white-space: nowrap; }
+    .text { font-size: 14px; color: #4b5563; margin-top: 3px; line-height: 1.45; }
+    .meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: #9ca3af; }
+    .badge {
+      background: #f3f4f6;
+      color: #374151;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    .empty {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 14px;
+      padding: 48px 20px;
+    }
+
+    /* ---------- Toast ---------- */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 320px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid #4f46e5;
+      border-radius: 10px;
+      padding: 12px 16px;
+      box-shadow: 0 10px 25px rgba(17, 24, 39, 0.12);
+      animation: toastIn 0.35s ease-out, toastOut 0.3s ease-in 5.2s forwards;
+    }
+    .toast .label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    .toast .message { font-size: 14px; font-weight: 600; margin-top: 3px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
+    @keyframes toastOut { to { opacity: 0; transform: translateX(30px); } }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+    @keyframes wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.45); } 100% { box-shadow: 0 0 0 7px rgba(22,163,74,0); } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="mailbox" id="mailbox">📬</div>
+      <div class="heading">
+        <h1>Subscription Notifications</h1>
+        <p class="subtitle">Changes to your subscriptions appear here in real time.</p>
+      </div>
+      <div class="status" id="status"><span class="dot"></span><span id="statusText">Connecting...</span></div>
+    </header>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>Inbox</span>
+        <span class="count" id="count">0</span>
+      </div>
+      <div id="list">
+        <p class="empty" id="empty">No notifications yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ICONS = {
+      plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+      edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+      remove: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+      info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M12 11v5"/></svg>'
+    };
+
+    const EVENTS = {
+      "service.created": {
+        css: "created", icon: ICONS.plus, title: "Subscription added",
+        text: (s) => `You are now subscribed to <b>${s.nameService}</b>.`
+      },
+      "service.updated": {
+        css: "updated", icon: ICONS.edit, title: "Subscription updated",
+        text: (s) => `Your <b>${s.nameService}</b> subscription was changed.`
+      },
+      "service.deleted": {
+        css: "deleted", icon: ICONS.remove, title: "Subscription cancelled",
+        text: (s) => `Your <b>${s.nameService}</b> subscription was cancelled.`
+      }
+    };
+
+    const list = document.getElementById("list");
+    const empty = document.getElementById("empty");
+    const count = document.getElementById("count");
+    const mailbox = document.getElementById("mailbox");
+    const status = document.getElementById("status");
+    const statusText = document.getElementById("statusText");
+    let total = 0;
+
+    function describe(n) {
+      return EVENTS[n.eventType] || {
+        css: "unknown", icon: ICONS.info, title: "Subscription changed",
+        text: (s) => `An update was registered for <b>${s.nameService}</b> (${n.eventType}).`
+      };
+    }
+
+    function formatDate(value) {
+      const date = new Date(value);
+      return isNaN(date) ? "" : date.toLocaleDateString("en-GB");
+    }
+
+    function addItem(n, live) {
+      const d = describe(n);
+      const time = live
+        ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+        : "Earlier";
+
+      const item = document.createElement("div");
+      item.className = `item ${d.css}${live ? " unread" : ""}`;
+      item.innerHTML = `
+        <div class="icon">${d.icon}</div>
+        <div class="content">
+          <div class="row">
+            <span class="title">${d.title}</span>
+            <span class="time">${time}</span>
+          </div>
+          <div class="text">${d.text(n)}</div>
+          <div class="meta">
+            <span class="badge">${n.type} plan</span>
+            <span>Member since ${formatDate(n.joining)}</span>
+          </div>
+        </div>`;
+      list.prepend(item);
+
+      empty.style.display = "none";
+      total++;
+      count.textContent = total;
+      return d;
+    }
+
+    function notify(d, n) {
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerHTML = `<div class="label">New notification</div>
+                         <div class="message">${d.title}: ${n.nameService}</div>`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 5600);
+
+      mailbox.classList.remove("ring");
+      void mailbox.offsetWidth;          // restart the animation
+      mailbox.classList.add("ring");
+    }
+
+    // ---------- SSE connection ----------
+    const source = new EventSource("/events");
+
+    source.onopen = () => {
+      status.className = "status online";
+      statusText.textContent = "Live";
+    };
+
+    source.onerror = () => {
+      status.className = "status offline";
+      statusText.textContent = "Reconnecting...";
+    };
+
+    // Initial state: previous notifications
+    source.addEventListener("history", (e) => {
+      list.querySelectorAll(".item").forEach((el) => el.remove());
+      total = 0;
+      count.textContent = 0;
+      JSON.parse(e.data).forEach((n) => addItem(n, false));
+      if (total === 0) empty.style.display = "block";
+    });
+
+    // New events
+    Object.keys(EVENTS).forEach((eventType) => {
+      source.addEventListener(eventType, (e) => {
+        const n = JSON.parse(e.data);
+        const d = addItem(n, true);
+        notify(d, n);
+      });
+    });
+  </script>
+</body>
+</html>
