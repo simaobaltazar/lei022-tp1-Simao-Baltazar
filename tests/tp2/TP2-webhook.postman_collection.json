@@ -1,0 +1,192 @@
+{
+  "info": {
+    "_postman_id": "2d770fa8-9310-4f46-ad7f-7de2b3889600",
+    "name": "TP2-webhook",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "57160960",
+    "_collection_link": "https://go.postman.co/collection/57160960-2d770fa8-9310-4f46-ad7f-7de2b3889600?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "W1 - Webhook sucesso",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set(\"eventId\", pm.variables.replaceIn(\"{{$guid}}\"));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "   {\r\n     \"eventId\": \"{{eventId}}\",\r\n     \"type\": \"service.created\",\r\n     \"data\": {\"id\": 20, \"nameService\": \"Spotify\", \"type\": \"family\", \"joining\": \"2026-11-08T00:00:00Z\"}\r\n   }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8000/webhook",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8000",
+          "path": [
+            "webhook"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "W2 - Webhook repetido",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 208\", () => pm.response.to.have.status(208));"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "   {\r\n     \"eventId\": \"{{eventId}}\",\r\n     \"type\": \"service.created\",\r\n     \"data\": {\"id\": 20, \"nameService\": \"Spotify\", \"type\": \"family\", \"joining\": \"2026-11-08T00:00:00Z\"}\r\n   }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8000/webhook",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8000",
+          "path": [
+            "webhook"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "E1 - Cadeia completa (API)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "  pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n\"nameService\": \"Netflix {{$randomInt}}\", \r\n\"type\": \"family\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/serviceManager",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "serviceManager"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "W3 - Payload inválido",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 422\", () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"Batata\": 3\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8000/webhook",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8000",
+          "path": [
+            "webhook"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "eventId",
+      "value": ""
+    }
+  ]
+}
