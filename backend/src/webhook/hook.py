@@ -1,14 +1,16 @@
 import requests
+import uuid
 
-link = "https://webhook.site/cb810607-8db4-49e7-ab49-5aca57777bd1"
+link = "http://localhost:8000/webhook"
 
 
 def send_webhook(eventType, service):
-    payload = {"type": eventType, 
-           "date": service}
+    payload = {
+              "eventId": str(uuid.uuid4()),
+              "type": eventType, 
+              "data": service
+       }
     
     res = requests.post(link, json=payload)
     print("Webhook send: ", eventType, "- status", res.status_code)
     return res.status_code
-
-
