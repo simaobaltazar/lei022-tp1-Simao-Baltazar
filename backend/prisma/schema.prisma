@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Type {
+  student
+  family
+  individual
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  nameUser  String    @db.VarChar(100)
+  email     String    @db.VarChar(255)
+  createdAt DateTime  @default(now())
+  services  Service[]
+
+  @@map("users")
+}
+
+model Service {
+  id          Int      @id @default(autoincrement())
+  nameService String   @db.VarChar(100)
+  type        Type
+  joining     DateTime @default(now())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, nameService])
+  @@index([userId])
+  @@map("services")
+}
