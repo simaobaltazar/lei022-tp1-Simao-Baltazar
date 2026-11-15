@@ -40,6 +40,31 @@ app.get('/api/serviceManager', async (req, res)=> {
     }
 })
 
+app.get('/api/users', async (req, res)=> {
+    try{
+    const users = await prisma.user.findMany({
+        orderBy: {id: 'asc'}
+   });
+    
+    res.status(200).json(users);
+    }catch(error){
+        error = translatePrismaError(error);
+        res.set('Content-Type', 'application/problem+json');
+        if(error.statusCode){
+            return res.status(error.statusCode).json({
+                status: error.statusCode,
+                title: error.name || 'Request error',
+                detail : error.message
+            });
+        }
+        return res.status(500).json({
+            status: 500,
+            title : "Internal server error",
+            detail: "Unexpected error occurred"
+        });
+    }
+})
+
 app.get('/api/serviceManager/:id', async (req, res) => {
     try{
     const id = Number(req.params.id);
@@ -57,6 +82,42 @@ app.get('/api/serviceManager/:id', async (req, res) => {
 
 
     res.status(200).json(service);
+    }catch(error){
+        error = translatePrismaError(error);
+        res.set('Content-Type', 'application/problem+json');
+        if(error.statusCode){
+            return res.status(error.statusCode).json({
+                status: error.statusCode,
+                title: error.name || 'Request error',
+                detail : error.message
+            });
+        }
+        return res.status(500).json({
+            status: 500,
+            title : "Internal server error",
+            detail: "Unexpected error occurred"
+        });
+    }
+})
+
+app.get('/api/users/:id', async (req, res) => {
+    try{
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new BadRequestException("Invalid ID. It must be a positive integer.");
+    }
+
+    const user = await prisma.user.findUnique({
+        where: {id},
+        include: {services: {orderBy: {id: 'asc'}}}
+     });
+
+    if(!user){
+        throw new ItemNotFoundException();
+    }
+
+    res.status(200).json(user);
     }catch(error){
         error = translatePrismaError(error);
         res.set('Content-Type', 'application/problem+json');
