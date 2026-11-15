@@ -12,21 +12,16 @@ const PORT = 3000;
 
 const prisma = new PrismaClient();
 
-const services = [
-    { id: 1, nameService: 'Apple Music', type:'student', joining:'2012-08-05T17:00:00.000Z'},
-    {id: 2, nameService: 'Prime Videos', type:'family', joining:'2023-09-04T13:00:00.000Z'}
-] 
-
 app.get('/api/serviceManager', async (req, res)=> {
     try{
     const nameFilter = req.query.name;
 
-   const services = await prisma.service.findMany({
+   const service = await prisma.service.findMany({
         where: nameFilter ? {nameService:{ equals: nameFilter, mode: 'insensitive'} } : {},
         orderBy: {id: 'asc'}
    });
     
-    res.status(200).json(services);
+    res.status(200).json(service);
     }catch(error){
         error = translatePrismaError(error);
         res.set('Content-Type', 'application/problem+json');
@@ -80,16 +75,28 @@ app.get('/api/serviceManager/:id', async (req, res) => {
     }
 })
 
-app.post('/api/serviceManager', (req, res) => {
+app.post('/api/serviceManager', async (req, res) => {
     try{   
-    const {nameService, type} = req.body || {};
+    const {nameService, type, userId} = req.body || {};
     const allowedTypes = ['student', 'individual', 'family'];
     
-    if(!nameService || !type){
-        throw new BadRequestException("The name and type field is required");
+    if(!nameService || !type || userId === undefined){
+        throw new BadRequestException("The name, type and userId field is required");
     }
 
-    const existingService = services.find(service => service.nameService.toLowerCase() === nameService.toLowerCase());
+    if(!Number.isInteger(userId) || userId <= 0){
+        throw new BadRequestException("Invalid userId. It must be a positeve integer");
+    }
+
+    const user = await prisma.user.findUnique({where: {id: userId}});
+
+    if(!user){
+        throw new ItemNotFoundException();
+    }
+
+    const existingService = await prisma.service.findFirst({
+        where:{userId, nameService:{ equals: nameService, mode: 'insensitive'}}
+    });
 
     if(existingService){
         throw new ConflictException("A service with this name already exists");
@@ -101,22 +108,18 @@ app.post('/api/serviceManager', (req, res) => {
 
 
 
-    const newService = {
-        id: services.length ? Math.max(...services.map(service => service.id))+1 : 1,
-        nameService,
-        type,
-        joining: new Date().toISOString()
-    };
+    const newService = await prisma.service.create({
+        data: {nameService, type, userId}
+    });
 
     res.set('Location', `/api/serviceManager/${newService.id}`);
 
-    services.push(newService);
-
-        sendWebhook('service.created', newService);
+    sendWebhook('service.created', newService);
 
 
     res.status(201).json(newService);
     }catch(error){
+        error = translatePrismaError(error);
         res.set('Content-Type', 'application/problem+json');
         if(error.statusCode){
             return res.status(error.statusCode).json({
@@ -133,9 +136,9 @@ app.post('/api/serviceManager', (req, res) => {
     }
 })
 
-app.put('/api/serviceManager/:id', (req, res) => {
+app.put('/api/serviceManager/:id', async (req, res) => {
     try{
-    const {nameService, type} = req.body;
+    const {nameService, type} = req.body || {};
     const allowedTypes = ['student', 'individual', 'family'];
     const id = Number(req.params.id);
 
@@ -143,7 +146,7 @@ app.put('/api/serviceManager/:id', (req, res) => {
         throw new BadRequestException("Invalid ID. It must be a positive integer.");
     }
 
-    const service = services.find(service => service.id === id);
+    const service = await prisma.service.findUnique({where: {id}});
 
     if(!service){
         throw new ItemNotFoundException();
@@ -154,10 +157,16 @@ app.put('/api/serviceManager/:id', (req, res) => {
         throw new BadRequestException("The name and type field is required");
     }
 
-    const existingService = services.find(service => service.nameService.toLowerCase() === nameService.toLowerCase());
+    const existingService = await prisma.service.findFirst({
+        where: {
+            userId: service.userId,
+            nameService: { equals: nameService, mode: "insensitive"},
+            NOT: {id}
+        }
+    });
 
 
-    if(existingService && existingService.id !== id){
+    if(existingService){
         throw new ConflictException("A service with this name already exists");
     }
 
@@ -165,14 +174,17 @@ app.put('/api/serviceManager/:id', (req, res) => {
         throw new BadRequestException("Invalid type . Allowed values are: student, individual, family");
     }
 
-    service.nameService = nameService;
-    service.type = type;
+    const updatedService = await prisma.service.update({
+        where: {id},
+        data: {nameService, type}
+    });
 
-    sendWebhook('service.updated', service);
+    sendWebhook('service.updated', updatedService);
 
 
-    res.status(200).json(service);
+    res.status(200).json(updatedService);
     }catch(error){
+        error = translatePrismaError(error);
         res.set('Content-Type', 'application/problem+json');
         if(error.statusCode){
             return res.status(error.statusCode).json({
@@ -189,7 +201,7 @@ app.put('/api/serviceManager/:id', (req, res) => {
     }
 })
 
-app.delete('/api/serviceManager/:id', (req, res) => {
+app.delete('/api/serviceManager/:id', async (req, res) => {
     try{
     const id = Number(req.params.id);
     
@@ -197,18 +209,19 @@ app.delete('/api/serviceManager/:id', (req, res) => {
         throw new BadRequestException("Invalid ID. It must be a positive integer.");
     }
     
-    const index = services.findIndex(service => service.id === id);
-    if(index === -1){
+    const service = await prisma.service.findUnique({where: {id}});
+
+    if(!service){
         throw new ItemNotFoundException();
     }
 
-    const removedService = services[index];
-    services.splice(index, 1);
+    const removedService = await prisma.service.delete({where:{id}});
 
     sendWebhook('service.deleted', removedService);
 
     res.status(204).send();
     }catch(error){
+        error = translatePrismaError(error);
         res.set('Content-Type', 'application/problem+json');
         if(error.statusCode){
             return res.status(error.statusCode).json({
