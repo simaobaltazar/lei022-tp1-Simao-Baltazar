@@ -5,26 +5,30 @@ const { ItemNotFoundException } = require('./src/exceptions/ItemNotFoundExceptio
 const { BadRequestException } = require('./src/exceptions/BadRequestException');
 const { ConflictException } = require('./src/exceptions/ConflictException');
 const { sendWebhook } = require('./src/grpc/webhookClient');
+const { PrismaClient} = require('@prisma/client');
+const { translatePrismaError} = require('./src/exceptions/translatePrismaError');
 
 const PORT = 3000;
+
+const prisma = new PrismaClient();
 
 const services = [
     { id: 1, nameService: 'Apple Music', type:'student', joining:'2012-08-05T17:00:00.000Z'},
     {id: 2, nameService: 'Prime Videos', type:'family', joining:'2023-09-04T13:00:00.000Z'}
 ] 
 
-app.get('/api/serviceManager', (req, res)=> {
+app.get('/api/serviceManager', async (req, res)=> {
     try{
-    const name = req.query.name;
+    const nameFilter = req.query.name;
 
-    if(name){
-        const service = services.filter(service => service.nameService.toLocaleLowerCase() === name.toLocaleLowerCase());
-        return res.status(200).json(service);
-    }
-    
+   const services = await prisma.service.findMany({
+        where: nameFilter ? {nameService:{ equals: nameFilter, mode: 'insensitive'} } : {},
+        orderBy: {id: 'asc'}
+   });
     
     res.status(200).json(services);
     }catch(error){
+        error = translatePrismaError(error);
         res.set('Content-Type', 'application/problem+json');
         if(error.statusCode){
             return res.status(error.statusCode).json({
@@ -41,7 +45,7 @@ app.get('/api/serviceManager', (req, res)=> {
     }
 })
 
-app.get('/api/serviceManager/:id', (req, res) => {
+app.get('/api/serviceManager/:id', async (req, res) => {
     try{
     const id = Number(req.params.id);
 
@@ -49,7 +53,7 @@ app.get('/api/serviceManager/:id', (req, res) => {
         throw new BadRequestException("Invalid ID. It must be a positive integer.");
     }
 
-    const service = services.find(service => service.id === id);
+    const service = await prisma.service.findUnique({where: {id} });
 
     if(!service){
         throw new ItemNotFoundException();
@@ -59,6 +63,7 @@ app.get('/api/serviceManager/:id', (req, res) => {
 
     res.status(200).json(service);
     }catch(error){
+        error = translatePrismaError(error);
         res.set('Content-Type', 'application/problem+json');
         if(error.statusCode){
             return res.status(error.statusCode).json({
