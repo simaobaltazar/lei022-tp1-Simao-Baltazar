@@ -1,16 +1,15 @@
-# Projeto: Service Manager – TP2
+# Projeto: Service Manager – TP3
 
 **Identificação do estudante:** Simão Baltazar (Nº de Aluno: 240001316)  
 **Versão de Node usada:** v24.21.0  
-**Versão de Python usada:** 3.12.10
+**Base de dados:** PostgreSQL 16 e Prisma 6
 
 **Domínio do recurso adicional:** Gestão de subscrições.
 
-**Opções implementadas:** gRPC (Opção B) e Webhook (Opção D). Sempre que a API REST do TP1 cria, altera ou remove uma subscrição, avisa um serviço Python por gRPC, que envia um webhook para um recetor. O recetor mostra a notificação numa página web em tempo real através de SSE.
-
+**TP3:** Os dados passaram da memória para uma base de dados PostgreSQL, através do Prisma. Foi acrescentada a entidade utilizador, com uma relação 1:N com as subscrições.
 ## Instalação
 
-1. Clone o repositório e entre na pasta do backend:
+1. Clone o repositório:
 
    ```bash
    git clone https://github.com/simaobaltazar/lei022-tp1-Simao-Baltazar.git
@@ -21,69 +20,107 @@
 
    ```bash
    npm install
-   py -m pip install grpcio grpcio-tools requests fastapi uvicorn
    ```
+
+3. Crie o ficheiro `.env`
+
+   ```bash
+   cp .env.example .env
+   ```
+
+## Migração
+
+Arranque o PostgreSQL, aplique as migrações e insira os dados iniciais:
+
+```bash
+docker compose up -d
+npx prisma migrate deploy
+npm run db:seed
+```
 
 ## Execução
 
-Em três terminais, a partir da pasta `backend`:
-
 ```bash
-cd src/receiver && py receiver.py        # Recetor + página (porta 8000)
-cd src/webhook && py webhook_server.py   # Servidor gRPC (porta 50051)
-node server.js                           # API REST (porta 3000)
+node server.js
 ```
 
-A página de notificações fica em [http://localhost:8000](http://localhost:8000).
+A API fica disponível em [http://localhost:3000](http://localhost:3000).
 
-## gRPC (Opção B)
+## Modelo de dados
 
-O contrato `backend/src/proto/service.proto` define o serviço `WebhookService` com a operação `SendWebHook`, que recebe o tipo de evento e a subscrição (`id`, `nameService`, `type`, `joining`) e devolve o `statusCode` do webhook.
+Um utilizador pode ter várias subscrições, e cada subscrição pertence a um só utilizador (relação 1:N).
 
-O `.proto` é partilhado pelos dois lados: o **Node** (cliente) lê-o em tempo de execução com o `@grpc/proto-loader`, e o **Python** (servidor) usa código gerado a partir dele (`service_pb2.py` e `service_pb2_grpc.py`). Se o contrato mudar, o código Python volta a gerar-se com:
+**User**
 
-```bash
-py -m grpc_tools.protoc -I../proto --python_out=. --grpc_python_out=. ../proto/service.proto
-```
-
-## Webhook (Opção D)
-
-* **Produtor:** serviço Python (`hook.py`), chamado por gRPC em cada alteração.
-* **Consumidor:** recetor FastAPI (`receiver.py`), em `POST http://localhost:8000/webhook`.
-* **Eventos:** `service.created`, `service.updated` e `service.deleted`.
-* **Payload:** `{ "eventId": "<uuid>", "type": "service.created", "data": { "id", "nameService", "type", "joining" } }`
-
-**Riscos tratados:**
-
-* **Mensagens repetidas:** o recetor ignora eventos com um `eventId` já processado (208).
-* **Payload inválido:** o recetor valida o evento com Pydantic (422).
-* **Falha no processamento:** se o recetor ou o serviço Python estiverem em baixo, o erro é registado e a API continua a responder.
-
-## Comparação com REST
-
-| Critério | gRPC | Webhook |
+| Campo | Tipo | Regras |
 | :--- | :--- | :--- |
-| **Padrão de comunicação** | Pedido/resposta com contrato | Orientado a eventos o produtor envia quando acontece alguma mudanca |
-| **Adequação** | Comunicação entre serviços em linguagens diferentes (Node -> Python) | Avisar outro sistema de cada alteração, sem ele ter de perguntar |
-| **Complexidade** | Maior que a do REST contrato, geração de código, cliente e servidor | Maior que a do REST: exige um recetor e tratamento de repetidos e falhas |
-| **Erros e limitações** | Códigos gRPC em vez não é usável diretamente no browser | A entrega não é garantida e podem chegar eventos repetidos |
-| **Vantagem** | O contrato garante que os dois lados usam os mesmos dados | O recetor reage logo a cada alteração |
-| **Desvantagem** | Mensagens binárias, mais difíceis de ver os erros | Sem novas tentativas um evento pode perder-se pois não há garantia de entrega|
+| `id` | Int | Chave primária, gerada pela base de dados |
+| `nameUser` | String | Obrigatório |
+| `email` | String | Obrigatório e único |
+| `createdAt` | DateTime | Preenchido automaticamente |
+
+**Service**
+
+| Campo | Tipo | Regras |
+| :--- | :--- | :--- |
+| `id` | Int | Chave primária, gerada pela base de dados |
+| `nameService` | String | Obrigatório e único por utilizador |
+| `type` | Enum | `student`, `individual` e `family` |
+| `joining` | DateTime | Gerado pela base de dados|
+| `userId` | Int | Chave estrangeira para `User`|
+
+## Endpoints
+
+| Método | Endpoint | Corpo | Sucesso | Erros |
+| :--- | :--- | :--- | :--- | :--- |
+| **GET** | `/api/serviceManager` | `name`| 200 | 500 |
+| **GET** | `/api/serviceManager/:id` | — | 200 | 400, 404 |
+| **POST** | `/api/serviceManager` | `{ nameService, type, userId }` | 201 | 400, 404, 409 |
+| **PUT** | `/api/serviceManager/:id` | `{ nameService, type }` | 200 | 400, 404, 409 |
+| **DELETE** | `/api/serviceManager/:id` | — | 204 | 400, 404 |
+| **GET** | `/api/users` | — | 200 | 500 |
+| **GET** | `/api/users/:id` | — | 200 (com as subscrições) | 400, 404 |
+| **POST** | `/api/users` | `{ nameUser, email, services? }` | 201 | 400, 409 |
+| **DELETE** | `/api/users/:id` | — | 204 | 400, 404, 409 |
+
+* O `POST /api/users` cria o utilizador e as suas subscrições numa transação.
+* O `DELETE /api/users/:id` é recusado se o utilizador ainda tiver subscrições.
+
+## Erros
+
+Os erros da base de dados são traduzidos para as exceções da API:
+
+| Erro do Prisma | Significado | Resposta |
+| :--- | :--- | :--- |
+| `P2002` | Valor único repetido | 409 |
+| `P2003` | Violação de uma relação | 409 |
+| `P2025` | Registo inexistente | 404 |
 
 ## Testes
 
-As evidências estão em `tests/tp2/`. Os testes do webhook podem ser repetidos no Postman atraves `tests/tp2/postman/TP2-webhook.postman_collection.json`. Os do gRPC fiz no Postman mas como o Postman não exporta pedidos gRPC coloquei 2 imagens como prova.
-
+As evidências estão em `tests/tp3/`. Os testes podem ser repetidos importando no Postman `tests/tp3/postman/TP3-persistencia.postman_collection.json`.
 | Teste | Esperado | Obtido |
 | :--- | :--- | :--- |
-| G1 – gRPC com pedido válido | `OK` | `OK` |
-| G2 – gRPC com pedido vazio `{}` | `INVALID_ARGUMENT` | `INVALID_ARGUMENT` |
-| W1 – Webhook válido | 200 | 200 |
-| W2 – Webhook repetido (mesmo `eventId`) | 208 | 208 |
-| W3 – Webhook inválido `{"foo": 1}` | 422 | 422 |
-| E1 – POST na API (cadeia completa) | 201 + notificação | 201 + notificação |
+| S1 – GET lista de subscrições | 200 | 200 |
+| S2 – POST subscrição válida | 201 | 201 |
+| S2F – POST subscrição sem `userId` | 400 | 400 |
+| S3 – GET subscrição por id | 200 | 200 |
+| S3F – GET subscrição inexistente | 404 | 404 |
+| S4 – PUT subscrição válida | 200 | 200 |
+| S4F – PUT subscrição com tipo inválido | 400 | 400 |
+| S5 – DELETE subscrição | 204 | 204 |
+| S5F – DELETE subscrição já apagada | 404 | 404 |
+| U1 – GET lista de utilizadores | 200 | 200 |
+| U2 – POST utilizador com subscrições (transação) | 201 | 201 |
+| U2F – POST utilizador sem email | 400 | 400 |
+| U3 – GET utilizador com subscrições | 200 | 200 |
+| U3F – GET utilizador inexistente | 404 | 404 |
+| U5 – DELETE utilizador sem subscrições | 204 | 204 |
+| U5F – DELETE utilizador com subscrições | 409 | 409 |
+| U6F – POST com subscrições repetidas (rollback da transação) | 409 | 409 |
+| Persistência – `GET /api/users` antes e depois de reiniciar a API | Mesmos dados | Mesmos dados |
 
 ## Utilização de IA
 
 * **Ferramenta:** Claude
-* **Finalidade:** VibeCoding do index.html e ajuda na validacao dos testes e exportação dos mesmos.
+* **Finalidade:** Explicação dos conceitos do Prisma e ajuda na elaboração da coleção Postman.
