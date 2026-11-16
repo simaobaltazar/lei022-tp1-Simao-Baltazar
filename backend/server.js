@@ -368,6 +368,47 @@ app.delete('/api/serviceManager/:id', async (req, res) => {
     }
 })
 
+app.delete('/api/users/:id', async (req,res) => {
+    try{
+        const id = Number(req.params.id);
+
+        if(!Number.isInteger(id) || id <= 0){
+            throw new BadRequestException("Invalid ID. It must be a positive integer.");
+        }
+
+        const user = await prisma.user.findUnique({where: {id}});
+
+        if(!user){
+            throw new ItemNotFoundException();
+        }
+
+        const serviceCount = await prisma.service.count({where: {userId: id}});
+
+        if(serviceCount > 0){
+            throw new ConflictException("The user still has services and cannot be deleted")
+        }
+
+        await prisma.user.delete({where: {id}});
+
+        res.status(204).send();
+    }catch(error){
+        error = translatePrismaError(error);
+        res.set('Content-Type', 'application/problem+json');
+        if(error.statusCode){
+            return res.status(error.statusCode).json({
+                status: error.statusCode,
+                title: error.name || 'Request error',
+                detail : error.message
+            });
+        }
+        return res.status(500).json({
+            status: 500,
+            title : "Internal server error",
+            detail: "Unexpected error occurred"
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log('API a executar em http://localhost:' + PORT);
 });
