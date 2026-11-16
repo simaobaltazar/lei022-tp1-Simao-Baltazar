@@ -197,6 +197,75 @@ app.post('/api/serviceManager', async (req, res) => {
     }
 })
 
+app.post('/api/users', async (req,res) =>{
+    try{
+    const {nameUser, email, services = []} = req.body || {};
+    const allowedTypes = ['student', 'individual', 'family'];
+
+    if(!nameUser || !email){
+        throw new BadRequestException("The name and email fields are required");
+    }
+
+    if(!Array.isArray(services)){
+        throw new BadRequestException("services must be a list")
+    }
+
+    for(const service of services){
+        if(!service.nameService || !service.type){
+            throw new BadRequestException("Each service needs a name and a type");
+        }
+        if(!allowedTypes.includes(service.type)){
+            throw new BadRequestException("Invalid type. Allowed values are: student, individual and family");
+        }
+    }
+
+    const existingUser = await prisma.user.findUnique({where: { email }});
+
+    if(existingUser){
+        throw new ConflictException("A user with this email already exists");
+    }
+
+    const user = await prisma.$transaction(async (tx) => {
+
+        const newUser = await tx.user.create({
+            data: {nameUser, email}
+        });
+
+        for(const service of services){
+            await tx.service.create({
+                data: {nameService: service.nameService, type: service.type, userId: newUser.id}
+            })
+        }
+        return tx.user.findUnique({
+            where:{id: newUser.id},
+            include: { services: true}
+        });
+    } );
+
+    for(const service of user.services){
+        sendWebhook('service.created', service);
+    }
+
+    res.set('Location', `/api/users/${user.id}`)
+    res.status(201).json(user);
+    }catch(error){
+        error = translatePrismaError(error);
+        res.set('Content-Type', 'application/problem+json');
+        if(error.statusCode){
+            return res.status(error.statusCode).json({
+                status: error.statusCode,
+                title: error.name || 'Request error',
+                detail : error.message
+            });
+        }
+        return res.status(500).json({
+            status: 500,
+            title : "Internal server error",
+            detail: "Unexpected error occurred"
+        });
+    }
+});
+
 app.put('/api/serviceManager/:id', async (req, res) => {
     try{
     const {nameService, type} = req.body || {};
