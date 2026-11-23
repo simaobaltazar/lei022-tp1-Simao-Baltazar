@@ -6,67 +6,33 @@ const { BadRequestException } = require('./src/exceptions/BadRequestException');
 const { ConflictException } = require('./src/exceptions/ConflictException');
 const { sendWebhook } = require('./src/grpc/webhookClient');
 const { PrismaClient} = require('@prisma/client');
-const { translatePrismaError} = require('./src/exceptions/translatePrismaError');
+const { errorHandler} = require('./src/middleware/errorHandler')
 
 const PORT = 3000;
 
 const prisma = new PrismaClient();
 
 app.get('/api/serviceManager', async (req, res)=> {
-    try{
+
     const nameFilter = req.query.name;
 
-   const service = await prisma.service.findMany({
+   const services = await prisma.service.findMany({
         where: nameFilter ? {nameService:{ equals: nameFilter, mode: 'insensitive'} } : {},
         orderBy: {id: 'asc'}
    });
     
-    res.status(200).json(service);
-    }catch(error){
-        error = translatePrismaError(error);
-        res.set('Content-Type', 'application/problem+json');
-        if(error.statusCode){
-            return res.status(error.statusCode).json({
-                status: error.statusCode,
-                title: error.name || 'Request error',
-                detail : error.message
-            });
-        }
-        return res.status(500).json({
-            status: 500,
-            title : "Internal server error",
-            detail: "Unexpected error occurred"
-        });
-    }
+    res.status(200).json(services);
 })
 
 app.get('/api/users', async (req, res)=> {
-    try{
     const users = await prisma.user.findMany({
         orderBy: {id: 'asc'}
    });
     
     res.status(200).json(users);
-    }catch(error){
-        error = translatePrismaError(error);
-        res.set('Content-Type', 'application/problem+json');
-        if(error.statusCode){
-            return res.status(error.statusCode).json({
-                status: error.statusCode,
-                title: error.name || 'Request error',
-                detail : error.message
-            });
-        }
-        return res.status(500).json({
-            status: 500,
-            title : "Internal server error",
-            detail: "Unexpected error occurred"
-        });
-    }
 })
 
 app.get('/api/serviceManager/:id', async (req, res) => {
-    try{
     const id = Number(req.params.id);
 
     if (!Number.isInteger(id) || id <= 0) {
@@ -78,30 +44,10 @@ app.get('/api/serviceManager/:id', async (req, res) => {
     if(!service){
         throw new ItemNotFoundException();
     }
-
-
-
     res.status(200).json(service);
-    }catch(error){
-        error = translatePrismaError(error);
-        res.set('Content-Type', 'application/problem+json');
-        if(error.statusCode){
-            return res.status(error.statusCode).json({
-                status: error.statusCode,
-                title: error.name || 'Request error',
-                detail : error.message
-            });
-        }
-        return res.status(500).json({
-            status: 500,
-            title : "Internal server error",
-            detail: "Unexpected error occurred"
-        });
-    }
 })
 
 app.get('/api/users/:id', async (req, res) => {
-    try{
     const id = Number(req.params.id);
 
     if (!Number.isInteger(id) || id <= 0) {
@@ -118,26 +64,9 @@ app.get('/api/users/:id', async (req, res) => {
     }
 
     res.status(200).json(user);
-    }catch(error){
-        error = translatePrismaError(error);
-        res.set('Content-Type', 'application/problem+json');
-        if(error.statusCode){
-            return res.status(error.statusCode).json({
-                status: error.statusCode,
-                title: error.name || 'Request error',
-                detail : error.message
-            });
-        }
-        return res.status(500).json({
-            status: 500,
-            title : "Internal server error",
-            detail: "Unexpected error occurred"
-        });
-    }
 })
 
-app.post('/api/serviceManager', async (req, res) => {
-    try{   
+app.post('/api/serviceManager', async (req, res) => { 
     const {nameService, type, userId} = req.body || {};
     const allowedTypes = ['student', 'individual', 'family'];
     
@@ -146,7 +75,7 @@ app.post('/api/serviceManager', async (req, res) => {
     }
 
     if(!Number.isInteger(userId) || userId <= 0){
-        throw new BadRequestException("Invalid userId. It must be a positeve integer");
+        throw new BadRequestException("Invalid userId. It must be a positive integer");
     }
 
     const user = await prisma.user.findUnique({where: {id: userId}});
@@ -167,8 +96,6 @@ app.post('/api/serviceManager', async (req, res) => {
         throw new BadRequestException("Invalid type . Allowed values are: student, individual, family");
     }
 
-
-
     const newService = await prisma.service.create({
         data: {nameService, type, userId}
     });
@@ -177,28 +104,10 @@ app.post('/api/serviceManager', async (req, res) => {
 
     sendWebhook('service.created', newService);
 
-
     res.status(201).json(newService);
-    }catch(error){
-        error = translatePrismaError(error);
-        res.set('Content-Type', 'application/problem+json');
-        if(error.statusCode){
-            return res.status(error.statusCode).json({
-                status: error.statusCode,
-                title: error.name || 'Request error',
-                detail : error.message
-            });
-        }
-        return res.status(500).json({
-            status: 500,
-            title : "Internal server error",
-            detail: "Unexpected error occurred"
-        });
-    }
 })
 
 app.post('/api/users', async (req,res) =>{
-    try{
     const {nameUser, email, services = []} = req.body || {};
     const allowedTypes = ['student', 'individual', 'family'];
 
@@ -248,26 +157,9 @@ app.post('/api/users', async (req,res) =>{
 
     res.set('Location', `/api/users/${user.id}`)
     res.status(201).json(user);
-    }catch(error){
-        error = translatePrismaError(error);
-        res.set('Content-Type', 'application/problem+json');
-        if(error.statusCode){
-            return res.status(error.statusCode).json({
-                status: error.statusCode,
-                title: error.name || 'Request error',
-                detail : error.message
-            });
-        }
-        return res.status(500).json({
-            status: 500,
-            title : "Internal server error",
-            detail: "Unexpected error occurred"
-        });
-    }
 });
 
 app.put('/api/serviceManager/:id', async (req, res) => {
-    try{
     const {nameService, type} = req.body || {};
     const allowedTypes = ['student', 'individual', 'family'];
     const id = Number(req.params.id);
@@ -313,26 +205,9 @@ app.put('/api/serviceManager/:id', async (req, res) => {
 
 
     res.status(200).json(updatedService);
-    }catch(error){
-        error = translatePrismaError(error);
-        res.set('Content-Type', 'application/problem+json');
-        if(error.statusCode){
-            return res.status(error.statusCode).json({
-                status: error.statusCode,
-                title: error.name || 'Request error',
-                detail : error.message
-            });
-        }
-        return res.status(500).json({
-            status: 500,
-            title : "Internal server error",
-            detail: "Unexpected error occurred"
-        });
-    }
 })
 
 app.delete('/api/serviceManager/:id', async (req, res) => {
-    try{
     const id = Number(req.params.id);
     
     if (!Number.isInteger(id) || id <= 0) {
@@ -350,26 +225,9 @@ app.delete('/api/serviceManager/:id', async (req, res) => {
     sendWebhook('service.deleted', removedService);
 
     res.status(204).send();
-    }catch(error){
-        error = translatePrismaError(error);
-        res.set('Content-Type', 'application/problem+json');
-        if(error.statusCode){
-            return res.status(error.statusCode).json({
-                status: error.statusCode,
-                title: error.name || 'Request error',
-                detail : error.message
-            });
-        }
-        return res.status(500).json({
-            status: 500,
-            title : "Internal server error",
-            detail: "Unexpected error occurred"
-        });
-    }
 })
 
 app.delete('/api/users/:id', async (req,res) => {
-    try{
         const id = Number(req.params.id);
 
         if(!Number.isInteger(id) || id <= 0){
@@ -391,23 +249,14 @@ app.delete('/api/users/:id', async (req,res) => {
         await prisma.user.delete({where: {id}});
 
         res.status(204).send();
-    }catch(error){
-        error = translatePrismaError(error);
-        res.set('Content-Type', 'application/problem+json');
-        if(error.statusCode){
-            return res.status(error.statusCode).json({
-                status: error.statusCode,
-                title: error.name || 'Request error',
-                detail : error.message
-            });
-        }
-        return res.status(500).json({
-            status: 500,
-            title : "Internal server error",
-            detail: "Unexpected error occurred"
-        });
-    }
 });
+
+app.use((req,res) => {
+    res.set('Content-Type', 'application/problem+json');
+    res.status(404).json({ status: 404, title: 'Not found', detail: `Route ${req.method} ${req.path} not found`});
+});
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
     console.log('API a executar em http://localhost:' + PORT);
