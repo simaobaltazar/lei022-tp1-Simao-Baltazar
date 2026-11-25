@@ -1,6 +1,8 @@
 const express = require('express');
+const cors = require('cors');
 const app = express();
 app.use(express.json());
+app.use(cors({ origin: 'http://localhost:5173'}));
 const { ItemNotFoundException } = require('./src/exceptions/ItemNotFoundException');
 const { ConflictException } = require('./src/exceptions/ConflictException');
 const { sendWebhook } = require('./src/grpc/webhookClient');
@@ -8,7 +10,7 @@ const { PrismaClient} = require('@prisma/client');
 const { errorHandler} = require('./src/middleware/errorHandler')
 const { validate } = require('./src/middleware/validate');
 const { createServiceSchema, idParamSchema, updateServiceSchema } = require('./src/schemas/serviceSchemas');
-const { createUserSchema} = require('./src/schemas/userSchemas')
+const { createUserSchema, updateUserSchema} = require('./src/schemas/userSchemas')
 
 const PORT = 3000;
 
@@ -155,6 +157,28 @@ app.put('/api/serviceManager/:id', validate(idParamSchema, 'params'), validate(u
 
     res.status(200).json(updatedService);
 })
+
+app.put('/api/users/:id', validate(idParamSchema, 'params'), validate(updateUserSchema), async (req,res) => {
+    const id = req.params.id;
+    const {nameUser, email} = req.body;
+
+    const user = await prisma.user.findUnique( {where: {id} });
+
+    if(!user){
+        throw new ItemNotFoundException();
+    }
+
+    const emailInUse = await prisma.user.findFirst({ where: {email, NOT: {id}}});
+    
+    if(emailInUse){
+        throw new ConflictException('A user with this email already exists');
+    }
+
+    const updatedUser = await prisma.user.update({where: {id},
+                                                data: {nameUser, email}
+    });
+    res.status(200).json(updatedUser);
+});
 
 app.delete('/api/serviceManager/:id', validate(idParamSchema, 'params') ,async (req, res) => {
     const id = Number(req.params.id);
