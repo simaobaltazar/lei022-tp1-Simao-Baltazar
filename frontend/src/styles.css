@@ -214,6 +214,36 @@ p {
   color: var(--text);
 }
 
+.search-form {
+  margin: 1.5rem 0;
+}
+
+.search-form label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.search-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input {
+  flex: 1;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.input:focus {
+  outline: 2px solid var(--primary-line);
+  border-color: var(--primary);
+}
+
 @media (max-width: 640px) {
   .navbar {
     flex-wrap: wrap;
