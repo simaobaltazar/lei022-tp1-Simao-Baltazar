@@ -1,12 +1,14 @@
+import { NavLink } from "react-router-dom";
+
 function Navbar() {
   return (
     <header className="navbar">
       <span className="brand">MySubs</span>
 
       <nav className="navbar-links" aria-label="Navegação principal">
-        <a href="#" className="active">Painel</a>
-        <a href="#">Pesquisar</a>
-        <a href="#">Definições</a>
+        <NavLink to="/" end>Painel</NavLink>
+        <NavLink to="/search">Pesquisar</NavLink>
+        <NavLink to="/settings">Definições</NavLink>
       </nav>
 
       <div className="navbar-actions">
