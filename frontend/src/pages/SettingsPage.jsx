@@ -1,21 +1,21 @@
-import { useState } from 'react';
-import { user } from '../data';
-import { formatDate } from '../utils';
-import FormField from '../components/FormField';
+import { useState } from "react";
+import { user } from "../data";
+import { formatDate } from "../utils";
+import FormField from "../components/FormField";
 
 function validate(nameUser, email) {
   const errors = {};
 
-  if (nameUser.trim() === '') {
-    errors.nameUser = 'O nome é obrigatório.';
+  if (nameUser.trim() === "") {
+    errors.nameUser = "O nome é obrigatório.";
   } else if (nameUser.length > 100) {
-    errors.nameUser = 'O nome tem no máximo 100 caracteres.';
+    errors.nameUser = "O nome tem no máximo 100 caracteres.";
   }
 
-  if (email.trim() === '') {
-    errors.email = 'O email é obrigatório.';
+  if (email.trim() === "") {
+    errors.email = "O email é obrigatório.";
   } else if (!/^\S+@\S+\.\S+$/.test(email)) {
-    errors.email = 'O email não é válido.';
+    errors.email = "O email não é válido.";
   }
 
   return errors;
@@ -26,11 +26,11 @@ function SettingsPage() {
   const [email, setEmail] = useState(user.email);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
 
   function handleSubmit(event) {
     event.preventDefault();
-    setMessage('');
+    setMessage("");
 
     const newErrors = validate(nameUser, email);
     setErrors(newErrors);
@@ -41,7 +41,7 @@ function SettingsPage() {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      setMessage('Alterações guardadas.');
+      setMessage("Alterações guardadas.");
     }, 1000);
   }
 
@@ -70,16 +70,24 @@ function SettingsPage() {
         />
 
         <button type="submit" className="btn btn-primary" disabled={saving}>
-          {saving ? 'A guardar…' : 'Guardar alterações'}
+          {saving ? "A guardar…" : "Guardar alterações"}
         </button>
 
-        {message && <p className="success-message" role="status">{message}</p>}
+        {message && (
+          <p className="success-message" role="status">
+            {message}
+          </p>
+        )}
       </form>
 
       <section className="danger-zone">
         <h2>Apagar conta</h2>
-        <p className="muted">Só é possível apagar a conta depois de remover todas as subscrições.</p>
-        <button type="button" className="btn btn-danger">Apagar conta</button>
+        <p className="muted">
+          Só é possível apagar a conta depois de remover todas as subscrições.
+        </p>
+        <button type="button" className="btn btn-danger">
+          Apagar conta
+        </button>
       </section>
     </main>
   );

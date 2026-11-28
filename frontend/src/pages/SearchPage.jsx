@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { allServices } from '../data';
-import SubscriptionTable from '../components/SubscriptionTable';
+import { useState } from "react";
+import { allServices } from "../data";
+import SubscriptionTable from "../components/SubscriptionTable";
 
 function SearchPage() {
-  const [text, setText] = useState('');
-  const [search, setSearch] = useState('');
+  const [text, setText] = useState("");
+  const [search, setSearch] = useState("");
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -12,7 +12,9 @@ function SearchPage() {
   }
 
   const results = search
-    ? allServices.filter((s) => s.nameService.toLowerCase() === search.toLowerCase())
+    ? allServices.filter(
+        (s) => s.nameService.toLowerCase() === search.toLowerCase(),
+      )
     : allServices;
 
   return (
@@ -30,7 +32,9 @@ function SearchPage() {
             value={text}
             onChange={(event) => setText(event.target.value)}
           />
-          <button type="submit" className="btn btn-primary">Pesquisar</button>
+          <button type="submit" className="btn btn-primary">
+            Pesquisar
+          </button>
         </div>
       </form>
 

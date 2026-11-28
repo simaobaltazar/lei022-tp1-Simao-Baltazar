@@ -3,19 +3,19 @@
 }
 
 :root {
-  --primary-dark: #3C3489;
-  --primary-light: #AFA9EC;
-  --primary-line: #CECBF6;
-  --primary: #534AB7;
+  --primary-dark: #3c3489;
+  --primary-light: #afa9ec;
+  --primary-line: #cecbf6;
+  --primary: #534ab7;
   --text: #1f1f1f;
   --muted: #8a8a8a;
   --line: #ececec;
-  --primary-soft: #F4F3FE;
-  --student: #7F77DD;
-  --family: #1D9E75;
-  --individual: #D85A30;
-  --success: #1D9E75;
-  --danger: #E24B4A;
+  --primary-soft: #f4f3fe;
+  --student: #7f77dd;
+  --family: #1d9e75;
+  --individual: #d85a30;
+  --success: #1d9e75;
+  --danger: #e24b4a;
 }
 
 body {
@@ -165,9 +165,15 @@ p {
   margin-right: 0.45rem;
 }
 
-.dot-student { background: var(--student); }
-.dot-family { background: var(--family); }
-.dot-individual { background: var(--individual); }
+.dot-student {
+  background: var(--student);
+}
+.dot-family {
+  background: var(--family);
+}
+.dot-individual {
+  background: var(--individual);
+}
 
 .sr-only {
   position: absolute;

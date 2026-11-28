@@ -1,4 +1,4 @@
-import { formatDate } from '../utils';
+import { formatDate } from "../utils";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -8,11 +8,13 @@ function SummaryCards({ services }) {
   }
 
   const total = services.length;
-  const students = services.filter((s) => s.type === 'student').length;
-  const families = services.filter((s) => s.type === 'family').length;
-  const individuals = services.filter((s) => s.type === 'individual').length;
+  const students = services.filter((s) => s.type === "student").length;
+  const families = services.filter((s) => s.type === "family").length;
+  const individuals = services.filter((s) => s.type === "individual").length;
 
-  const sorted = [...services].sort((a, b) => new Date(a.joining) - new Date(b.joining));
+  const sorted = [...services].sort(
+    (a, b) => new Date(a.joining) - new Date(b.joining),
+  );
   const oldest = sorted[0];
   const newest = sorted[sorted.length - 1];
   const years = CURRENT_YEAR - new Date(oldest.joining).getFullYear();
@@ -28,9 +30,14 @@ function SummaryCards({ services }) {
       <div className="summary-item">
         <p className="summary-label">Por tipo</p>
         <p className="summary-note">
-          <span className="dot dot-student"></span>{students} student<br />
-          <span className="dot dot-family"></span>{families} family<br />
-          <span className="dot dot-individual"></span>{individuals} individual
+          <span className="dot dot-student"></span>
+          {students} student
+          <br />
+          <span className="dot dot-family"></span>
+          {families} family
+          <br />
+          <span className="dot dot-individual"></span>
+          {individuals} individual
         </p>
       </div>
 
