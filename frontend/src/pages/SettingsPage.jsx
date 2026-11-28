@@ -2,6 +2,7 @@ import { useState } from "react";
 import { user } from "../data";
 import { formatDate } from "../utils";
 import FormField from "../components/FormField";
+import ConfirmModal from "../components/ConfirmModal";
 
 function validate(nameUser, email) {
   const errors = {};
@@ -27,6 +28,10 @@ function SettingsPage() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleted, setDeleted] = useState(false);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -43,6 +48,23 @@ function SettingsPage() {
       setSaving(false);
       setMessage("Alterações guardadas.");
     }, 1000);
+  }
+
+  function handleDeleteAccount() {
+    setDeleting(true);
+    setDeleteError("");
+
+    setTimeout(() => {
+      setDeleting(false);
+      setConfirmOpen(false);
+      if (user.services.length > 0) {
+        setDeleteError(
+          "Não é possível apagar a conta enquanto tiver subscrições. Apague-as primeiro no painel.",
+        );
+      } else {
+        setDeleted(true);
+      }
+    }, 800);
   }
 
   return (
@@ -85,10 +107,38 @@ function SettingsPage() {
         <p className="muted">
           Só é possível apagar a conta depois de remover todas as subscrições.
         </p>
-        <button type="button" className="btn btn-danger">
-          Apagar conta
-        </button>
+
+        {deleted ? (
+          <p className="success-message" role="status">
+            Conta apagada.
+          </p>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={() => setConfirmOpen(true)}
+          >
+            Apagar conta
+          </button>
+        )}
+
+        {deleteError && (
+          <p className="field-error" role="alert">
+            {deleteError}
+          </p>
+        )}
       </section>
+
+      {confirmOpen && (
+        <ConfirmModal
+          title="Apagar conta"
+          message={`Tem a certeza que quer apagar a conta de ${user.nameUser}? Esta ação não pode ser desfeita.`}
+          confirmLabel="Apagar conta"
+          busy={deleting}
+          onConfirm={handleDeleteAccount}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
     </main>
   );
 }

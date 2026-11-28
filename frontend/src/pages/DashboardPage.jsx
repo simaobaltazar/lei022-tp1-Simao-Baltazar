@@ -4,6 +4,7 @@ import SummaryCards from "../components/SummaryCards";
 import SubscriptionTable from "../components/SubscriptionTable";
 import ConfirmModal from "../components/ConfirmModal";
 import ServiceFormModal from "../components/ServiceFormModal";
+import Empty from "../components/Empty";
 
 function DashboardPage() {
   const [services, setServices] = useState(user.services);
@@ -89,11 +90,27 @@ function DashboardPage() {
       </div>
 
       <SummaryCards services={services} />
-      <SubscriptionTable
-        services={services}
-        onEdit={openEditForm}
-        onDelete={(service) => setServiceToDelete(service)}
-      />
+      {services.length === 0 ? (
+        <Empty
+          title="Ainda não tem subscrições"
+          text="Adicione a primeira para começar a acompanhá-las aqui."
+        >
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={openCreateForm}
+          >
+            {" "}
+            + Adicionar subscrição{" "}
+          </button>
+        </Empty>
+      ) : (
+        <SubscriptionTable
+          services={services}
+          onEdit={openEditForm}
+          onDelete={(service) => setServiceToDelete(service)}
+        />
+      )}
 
       {formOpen && (
         <ServiceFormModal
