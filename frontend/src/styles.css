@@ -15,6 +15,7 @@
   --family: #1D9E75;
   --individual: #D85A30;
   --success: #1D9E75;
+  --danger: #E24B4A;
 }
 
 body {
@@ -70,7 +71,6 @@ body {
   cursor: pointer;
 }
 
-/* Tamanho e espaçamento dos títulos e parágrafos */
 h1 {
   font-size: 1.4rem;
   font-weight: 500;
@@ -302,6 +302,37 @@ p {
   background: #ffffff;
   border-color: var(--danger);
   color: var(--danger);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.modal h2 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0 0 0.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
 }
 
 @media (max-width: 640px) {
